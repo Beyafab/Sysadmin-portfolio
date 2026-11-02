@@ -1,82 +1,65 @@
-# Enterprise Networking
+import csv
+import io
+import json
+import boto3
 
-![Networking](https://img.shields.io/badge/Focus-Enterprise%20Networking-blue)
-![Cisco](https://img.shields.io/badge/Technology-Cisco-049fd9)
-![Status](https://img.shields.io/badge/Status-Active-success)
+s3_client = boto3.client("s3")
+dynamodb = boto3.resource("dynamodb")
 
-## Overview
+table = dynamodb.Table("Students")
 
-This directory contains practical enterprise networking labs, configurations, simulations, and technical documentation developed to strengthen my networking and infrastructure engineering skills.
 
-The work focuses on designing, configuring, testing, and troubleshooting network environments using industry-standard networking technologies and tools.
+def lambda_handler(event, context):
+    bucket_name = event["Records"][0]["s3"]["bucket"]["name"]
+    file_name = event["Records"][0]["s3"]["object"]["key"]
 
-Each lab is documented to explain its objectives, network topology, configurations, verification procedures, and troubleshooting steps.
+    try:
+        # Read CSV file from S3
+        response = s3_client.get_object(
+            Bucket=bucket_name,
+            Key=file_name
+        )
 
-## Technical Areas
+        content = response["Body"].read().decode("utf-8")
 
-The following networking concepts and technologies are covered:
+        # Read only the last CSV data row
+        csv_reader = csv.DictReader(io.StringIO(content))
+        last_row = None
 
-- **Routing:** Static routing, dynamic routing, OSPF, and inter-network communication.
-- **Switching:** VLANs, trunking, inter-VLAN routing, and switching fundamentals.
-- **Network Security:** Access Control Lists (ACLs), traffic filtering, and network access control.
-- **Network Services:** DHCP, DNS, NAT, and related infrastructure services.
-- **Network Troubleshooting:** Connectivity testing, routing analysis, and fault isolation.
-- **Enterprise Network Design:** Network segmentation, topology design, and scalable infrastructure.
+        for row in csv_reader:
+            last_row = row
 
-## Tools & Technologies
+        if last_row is None:
+            return {
+                "statusCode": 400,
+                "body": json.dumps("CSV file contains no data rows.")
+            }
 
-| Category | Technologies |
-|---|---|
-| Network Simulation | Cisco Packet Tracer, GNS3 |
-| Routing | OSPF, Static Routing |
-| Switching | VLANs, Trunking |
-| Network Services | DHCP, DNS, NAT |
-| Security | Standard ACLs, Extended ACLs |
-| Protocols | TCP/IP, Ethernet, ICMP |
-| Operating Systems | Linux, Windows |
+        # Prepare DynamoDB item
+        item = {
+            "username": last_row["username"],
+            "full_name": last_row["full_name"],
+            "gender": last_row["gender"],
+            "institution_name": last_row["institution_name"],
+            "exam_topic_name": last_row["exam_topic_name"],
+            "year": last_row["year"],
+            "total_score": float(last_row["total_score"] or 0),
+            "is_disqualified": int(last_row["is_disqualified"]),
+            "is_absent": int(last_row["is_absent"]),
+            "supervisor_report": int(last_row["supervisor_report"]),
+            "status": last_row["status"]
+        }
 
-## Engineering Approach
+        # Save only the last row
+        table.put_item(Item=item)
 
-Each networking lab follows a practical workflow:
+        return {
+            "statusCode": 200,
+            "body": json.dumps(
+                f"Successfully processed the last record: {item['username']}"
+            )
+        }
 
-1. **Design:** Understand the requirements and develop the network topology.
-2. **Configure:** Apply the necessary router and switch configurations.
-3. **Verify:** Test connectivity and confirm expected network behavior.
-4. **Troubleshoot:** Identify and resolve configuration or connectivity issues.
-5. **Document:** Record configurations, verification commands, results, and lessons learned.
-
-## Learning Objectives
-
-The main objectives of this portfolio section are to:
-
-- Develop practical enterprise networking skills.
-- Understand routing and switching in real-world environments.
-- Build and troubleshoot multi-network environments.
-- Strengthen Cisco networking and CCNA-level knowledge.
-- Apply network security and traffic management concepts.
-- Develop the skills required for network administration and infrastructure support.
-
-## Documentation Standards
-
-Each lab should include, where applicable:
-
-- Lab overview and objectives.
-- Network topology diagram.
-- IP addressing table.
-- Device configurations.
-- Verification commands and outputs.
-- Screenshots of important configurations.
-- Troubleshooting notes.
-- Conclusion and possible improvements.
-
-## About
-
-I am an Information Systems graduate from Addis Ababa University with practical training in cloud and network infrastructure.
-
-I am continuously developing my skills in enterprise networking, Linux administration, cloud infrastructure, and IT systems administration through hands-on labs and technical projects.
-
-**GitHub:** [Beyafab](https://github.com/Beyafab)
-
----
-
-*Design. Configure. Connect. Secure. Troubleshoot.*
+    except Exception as e:
+        print(f"Error processing CSV: {str(e)}")
+        raise
