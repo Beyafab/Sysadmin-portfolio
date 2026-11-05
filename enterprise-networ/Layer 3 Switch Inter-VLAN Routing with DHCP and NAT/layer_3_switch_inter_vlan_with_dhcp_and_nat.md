@@ -235,3 +235,5 @@ To verify operational status across devices:
 
 ## 🤝 Contributing
 Feel free to open an issue or submit a pull request if you find any misconfigurations or want to expand the topology!
+
+## !!dhcp from the cloud didn't worked for me will be fixed
