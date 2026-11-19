@@ -1,4 +1,4 @@
-# 🏢 Build an Enterprise Network from Scratch (Cisco Packet Tracer)
+# 🏢 Build an Enterprise Network from Scratch using packet tracer
 
 A complete, high-availability enterprise campus network built from scratch in **Cisco Packet Tracer** (based on the *ITTechStudies* CCNA enterprise lab). This project demonstrates multi-layer switching, gateway redundancy, dynamic routing, and WAN connectivity.
 
